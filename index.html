@@ -627,6 +627,72 @@
             }
         }, 1000);
 
+        /* =========================================================
+           LIVE SYNC WITH THE LUMIÈRE DASHBOARD "Customize Invitation"
+           panel. The dashboard page embeds this site inside an
+           <iframe> and pushes every field change here via
+           postMessage() (since it's a different origin, this is the
+           only way it can reach us). We listen for that message and
+           update the same display elements that "Save & Apply
+           Changes" updates below.
+           ========================================================= */
+        window.addEventListener('message', function(event) {
+            // Uncomment and set this once you know the dashboard's exact
+            // domain, to only accept messages from that origin:
+            // if (event.origin !== 'https://your-dashboard-domain.com') return;
+            if (!event.data || event.data.type !== 'LUMIERE_LIVE_UPDATE') return;
+            applyLiveDataFromDashboard(event.data.payload || {});
+        });
+
+        function applyLiveDataFromDashboard(data) {
+            const setText = (id, val) => {
+                const el = document.getElementById(id);
+                if (el && val !== undefined && val !== null && val !== '') el.innerText = val;
+            };
+
+            const groom = data.groom || 'Kasun';
+            const bride = data.bride || 'Chathurya';
+            const coupleTitle = `${groom} & ${bride}`;
+
+            const titleEl = document.getElementById('pageTitle');
+            if (titleEl) titleEl.innerText = `${coupleTitle} - Wedding Invitation`;
+            setText('introNames', coupleTitle);
+            setText('heroNames', coupleTitle);
+            setText('footerNames', coupleTitle);
+            setText('footerTitleNames', coupleTitle);
+
+            if (data.heroDesc !== undefined) setText('displayHeroDesc', data.heroDesc);
+            if (data.groomParents !== undefined) setText('displayGroomParents', data.groomParents);
+            if (data.brideParents !== undefined) setText('displayBrideParents', data.brideParents);
+            if (data.time !== undefined) setText('displayTime', data.time);
+            if (data.venue !== undefined) setText('displayVenueName', data.venue);
+            if (data.address !== undefined) setText('displayVenueAddress', data.address);
+            if (data.bio !== undefined) setText('displayBio', data.bio);
+            if (data.guest !== undefined) {
+                setText('introGuestName', data.guest);
+                setText('dynamicGuestName', data.guest);
+            }
+
+            const mapBtn = document.getElementById('displayMapBtn');
+            if (mapBtn && data.map) mapBtn.href = data.map;
+
+            if (data.date) {
+                const dateObj = new Date(data.date);
+                if (!isNaN(dateObj.getTime())) {
+                    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                    setText('displayDate', dateObj.toLocaleDateString('en-US', options));
+                }
+            }
+
+            if (Array.isArray(data.gallery)) {
+                data.gallery.forEach((src, i) => {
+                    if (!src) return;
+                    const img = document.getElementById(`gridImg${i}`);
+                    if (img) img.src = src;
+                });
+            }
+        }
+
         function applyCustomizations() {
             const groom = document.getElementById('inpGroom').value;
             const bride = document.getElementById('inpBride').value;
