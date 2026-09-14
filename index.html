@@ -615,7 +615,31 @@
         }
 
         // Countdown Timer
-        const targetDate = new Date("August 20, 2099 09:30:00").getTime();
+        let targetDate = new Date("August 20, 2099 09:30:00").getTime();
+
+        // Recomputes the countdown target from a date (YYYY-MM-DD) and a
+        // free-text time string (e.g. "9:30 AM Auspicious Nekathing").
+        // Falls back to midnight if no valid time can be extracted.
+        function updateCountdownTarget(dateVal, timeVal) {
+            if (!dateVal) return;
+            let hours = 0, minutes = 0;
+            if (timeVal) {
+                const match = String(timeVal).match(/(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/);
+                if (match) {
+                    hours = parseInt(match[1], 10);
+                    minutes = parseInt(match[2], 10);
+                    const meridiem = (match[3] || '').toUpperCase();
+                    if (meridiem === 'PM' && hours < 12) hours += 12;
+                    if (meridiem === 'AM' && hours === 12) hours = 0;
+                }
+            }
+            const timePart = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+            const newTarget = new Date(`${dateVal}T${timePart}`);
+            if (!isNaN(newTarget.getTime())) {
+                targetDate = newTarget.getTime();
+            }
+        }
+
         setInterval(() => {
             const now = new Date().getTime();
             const distance = targetDate - now;
@@ -624,6 +648,11 @@
                 document.getElementById('hours').innerText = String(Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))).padStart(2, '0');
                 document.getElementById('minutes').innerText = String(Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
                 document.getElementById('seconds').innerText = String(Math.floor((distance % (1000 * 60)) / 1000)).padStart(2, '0');
+            } else {
+                document.getElementById('days').innerText = '00';
+                document.getElementById('hours').innerText = '00';
+                document.getElementById('minutes').innerText = '00';
+                document.getElementById('seconds').innerText = '00';
             }
         }, 1000);
 
@@ -682,6 +711,7 @@
                     const options = { year: 'numeric', month: 'long', day: 'numeric' };
                     setText('displayDate', dateObj.toLocaleDateString('en-US', options));
                 }
+                updateCountdownTarget(data.date, data.time);
             }
 
             if (Array.isArray(data.gallery)) {
@@ -726,6 +756,7 @@
                 const options = { year: 'numeric', month: 'long', day: 'numeric' };
                 document.getElementById('displayDate').innerText = dateObj.toLocaleDateString('en-US', options);
             }
+            updateCountdownTarget(dateVal, timeVal);
 
             // Handle Photo Uploads
             for(let i=0; i<5; i++) {
