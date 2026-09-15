@@ -471,6 +471,30 @@
             <p id="footerNames" class="font-cinzel text-lg sm:text-2xl text-[#5C060C] font-bold inline-block animate-couple-name" style="animation-duration: 4s;">Kasun & Chathurya</p>
         </section>
 
+        <!-- RSVP SECTION -->
+        <section id="rsvpSection" data-aos="fade-up" class="p-4 sm:p-7 text-center relative overflow-hidden max-w-xl mx-auto">
+            <p class="text-[9px] sm:text-[10px] uppercase tracking-[0.25em] text-[#5C060C] font-bold mb-1.5 font-cinzel animate-text-shimmer">Kindly Respond</p>
+            <h2 class="font-cinzel text-lg sm:text-xl md:text-2xl font-bold text-tropicalText mb-4">RSVP to Our Celebration</h2>
+
+            <div id="rsvpFormState" class="max-w-md mx-auto">
+                <label class="block text-[9px] sm:text-[10px] uppercase tracking-widest text-tropicalSubText font-bold font-cinzel mb-1.5">Number of Guests Attending</label>
+                <input type="number" id="rsvpGuestCountInput" min="1" max="15" value="1" class="w-full max-w-[180px] mx-auto block text-center py-2.5 mb-4 rounded-xl border border-kandyanGold/40 text-sm font-bold text-[#5C060C] outline-none bg-white/70 font-cinzel">
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="submitTemplateRsvp('Accepted')" class="py-3 rounded-xl bg-[#5C060C] hover:bg-kandyanDeepRed text-kandyanLightGold font-bold text-xs uppercase tracking-wider shadow-md font-cinzel border border-kandyanGold/40 cursor-pointer transition duration-300">
+                        Accept & Attend
+                    </button>
+                    <button onclick="submitTemplateRsvp('Declined')" class="py-3 rounded-xl bg-white border border-kandyanGold/40 text-[#5C060C] font-bold text-xs uppercase tracking-wider hover:bg-rose-50 hover:border-rose-300 cursor-pointer font-cinzel transition duration-300">
+                        Regrets / Decline
+                    </button>
+                </div>
+            </div>
+
+            <div id="rsvpDoneState" class="hidden max-w-md mx-auto">
+                <p id="rsvpDoneMessage" class="font-cinzel text-sm sm:text-base font-bold text-[#5C060C] mb-2"></p>
+                <button onclick="changeTemplateRsvp()" class="text-[11px] text-tropicalSubText underline cursor-pointer font-cinzel">Change my response</button>
+            </div>
+        </section>
+
     </main>
 
     <div id="lightboxModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden items-center justify-center p-4" onclick="closeLightbox()">
@@ -618,6 +642,44 @@
             document.getElementById('lightboxModal').classList.add('hidden');
         }
 
+        /* =========================================================
+           RSVP TO OUR CELEBRATION
+           Lives inside the template itself now. When the couple's
+           Lumière dashboard has embedded us in an iframe, submitting
+           here posts the response up to the parent (which saves it to
+           Firestore and updates the "Customer Link Share List &
+           Acceptance Status" table). If opened standalone (native
+           ?to= link, no dashboard parent), it just shows the local
+           confirmation -- there's nowhere else for it to be saved.
+           ========================================================= */
+        function submitTemplateRsvp(status) {
+            const countInput = document.getElementById('rsvpGuestCountInput');
+            const guestCount = countInput ? countInput.value : 1;
+            renderRsvpDoneState(status, status === 'Accepted' ? (parseInt(guestCount, 10) || 1) : 0);
+            try {
+                window.parent.postMessage({ type: 'LUMIERE_RSVP_SUBMIT', payload: { status, guestCount } }, '*');
+            } catch (e) {}
+        }
+
+        function changeTemplateRsvp() {
+            const formEl = document.getElementById('rsvpFormState');
+            const doneEl = document.getElementById('rsvpDoneState');
+            if (formEl) formEl.classList.remove('hidden');
+            if (doneEl) doneEl.classList.add('hidden');
+        }
+
+        function renderRsvpDoneState(status, guestCount) {
+            const formEl = document.getElementById('rsvpFormState');
+            const doneEl = document.getElementById('rsvpDoneState');
+            const msgEl = document.getElementById('rsvpDoneMessage');
+            if (!formEl || !doneEl || !msgEl) return;
+            formEl.classList.add('hidden');
+            doneEl.classList.remove('hidden');
+            msgEl.innerText = status === 'Accepted'
+                ? `✓ Confirmed for ${guestCount || 1} guest(s). We can't wait to celebrate with you!`
+                : 'You have declined this invitation.';
+        }
+
         // Countdown Timer
         let targetDate = new Date("August 20, 2099 09:30:00").getTime();
 
@@ -711,6 +773,12 @@
             if (data.hideHostControls) {
                 const hc = document.getElementById('hostControlsContainer');
                 if (hc) hc.style.display = 'none';
+            }
+
+            // If this invitor already responded (per the dashboard's saved
+            // record), show that state instead of a blank RSVP form.
+            if (data.rsvpStatus && data.rsvpStatus !== 'Pending') {
+                renderRsvpDoneState(data.rsvpStatus, data.rsvpGuestCount);
             }
 
             const mapBtn = document.getElementById('displayMapBtn');
