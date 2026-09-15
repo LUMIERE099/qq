@@ -788,7 +788,16 @@
                 const dateObj = new Date(data.date);
                 if (!isNaN(dateObj.getTime())) {
                     const options = { year: 'numeric', month: 'long', day: 'numeric' };
-                    setText('displayDate', dateObj.toLocaleDateString('en-US', options));
+                    const dateStr = dateObj.toLocaleDateString('en-US', options);
+                    setText('displayDate', dateStr);
+
+                    // The footer's "20 August 2099 • The Queens Hotel, Kandy"
+                    // line was never wired up to the dashboard data at all --
+                    // fix that here too.
+                    const footerSub = document.getElementById('footerSubText');
+                    if (footerSub) {
+                        footerSub.innerText = `${dateStr}${data.venue ? ' • ' + data.venue : ''}`;
+                    }
                 }
                 updateCountdownTarget(data.date, data.time);
             }
